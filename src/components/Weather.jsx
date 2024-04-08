@@ -90,7 +90,7 @@ const Weather = () => {
     const getForecastData = async () => {
         const data = await (
             await axios.get(
-                `http://api.openweathermap.org/data/2.5/forecast?appid=15836d36b32958ff62c0f30e4d1aafba&id=${cityData.id}&units=metric`
+                `https://api.openweathermap.org/data/2.5/forecast?appid=15836d36b32958ff62c0f30e4d1aafba&id=${cityData.id}&units=metric`
             )
         ).data;
 

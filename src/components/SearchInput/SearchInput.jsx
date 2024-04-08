@@ -21,7 +21,7 @@ export default () => {
 
         const data = await (
             await axios.get(
-                `http://api.openweathermap.org/geo/1.0/direct?limit=5&appid=15836d36b32958ff62c0f30e4d1aafba&q=${q}`
+                `https://api.openweathermap.org/geo/1.0/direct?limit=5&appid=15836d36b32958ff62c0f30e4d1aafba&q=${q}`
             )
         ).data;
 
@@ -45,7 +45,7 @@ export default () => {
 
         const data = await (
             await axios.get(
-                `http://api.openweathermap.org/data/2.5/weather?appid=15836d36b32958ff62c0f30e4d1aafba&lat=${lat}&lon=${lon}&units=metric`
+                `https://api.openweathermap.org/data/2.5/weather?appid=15836d36b32958ff62c0f30e4d1aafba&lat=${lat}&lon=${lon}&units=metric`
             )
         ).data;
 
