@@ -153,7 +153,7 @@ const Weather = () => {
                                                   <div
                                                       className="w-full h-[300px] rounded-lg absolute left-0 top-0 bg-no-repeat bg-cover p-4"
                                                       style={{
-                                                          backgroundImage: `url('/src/assets/bg/${weatherConditionNames[0]}${weatherConditionNames[1]}.png')`,
+                                                          backgroundImage: `url('/images/bg/${weatherConditionNames[0]}${weatherConditionNames[1]}.png')`,
                                                       }}
                                                   >
                                                       <div className="flex flex-col h-full justify-between">

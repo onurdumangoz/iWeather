@@ -6,7 +6,7 @@ import { getWeatherConditionNames } from '../utils/helpers';
 const WeatherIcon = ({ iconId, sunrise, sunset, current, className }) => {
     const WeatherConditionNames = getWeatherConditionNames(iconId, sunrise, sunset, current);
 
-    const svgPath = `/src/assets/icons/${WeatherConditionNames[0]}${WeatherConditionNames[1]}.svg`;
+    const svgPath = `/images/icons/${WeatherConditionNames[0]}${WeatherConditionNames[1]}.svg`;
 
     const classes = className?.split(' ');
 
