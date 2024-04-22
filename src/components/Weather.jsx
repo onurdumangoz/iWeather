@@ -21,13 +21,13 @@ const Weather = () => {
     const [forecastData, setForecastData] = useState([]);
     //const [first, setfirst] = useState(second)
 
-    const [dayBackground, setDayBackground] = useState('');
+    //const [dayBackground, setDayBackground] = useState('');
 
     const getForecastData = (cityId = 0) => {
         try {
-            api.get(`/data/2.5/forecast?id=${cityId > 0 ? cityId : cityData.id}`).then((response) => {
+            api.get(`/data/2.5/forecast?id=${cityId > 0 ? cityId : cityData[0].id}`).then((response) => {
                 const groupedData = _.groupBy(response.data.list, (x) => new Date(x.dt * 1000).getDate());
-                setForecastData(groupedData);
+                setForecastData((prev) => [...prev, groupedData]);
             });
         } catch (error) {
             if (error.response) {
@@ -47,14 +47,36 @@ const Weather = () => {
             try {
                 const cityIDsArr = cityIDs.split(',');
 
+                let cDatas = [];
+                let fDatas = [];
+                await Promise.all(
+                    cityIDsArr.map(async (id) => {
+                        const cData = await (await api.get(`/data/2.5/weather?id=${id}`)).data;
+                        cDatas.push(cData);
+
+                        const fData = await (await api.get(`/data/2.5/forecast?id=${id}`)).data;
+                        const groupedFData = _.groupBy(fData.list, (x) => new Date(x.dt * 1000).getDate());
+
+                        fDatas.push(groupedFData);
+                    })
+                );
+
+                setCityData(cDatas);
+                setForecastData(fDatas);
+
                 for (let i = 0; i < cityIDsArr.length; i++) {
                     /*api.get(`/data/2.5/weather?id=${cityIDsArr[i]}`).then((response) => {
                         setCityData(response.data);
                         getForecastData(response.data.id);
                     });*/
-                    const data = await (await api.get(`/data/2.5/weather?id=${cityIDsArr[i]}`)).data;
-                    setCityData((prev) => [...prev, data]);
-                    getForecastData(response.data.id);
+                    /*const data = await (await api.get(`/data/2.5/weather?id=${cityIDsArr[i]}`)).data;
+                    //console.log();
+
+                    if (cityData.filter((x) => x.id == data.id).length <= 0) {
+                        setCityData((prev) => [...prev, data]);
+                    }
+
+                    getForecastData(data.id);*/
                 }
             } catch (error) {
                 if (error.response) {
@@ -69,10 +91,10 @@ const Weather = () => {
             }
         };
 
-        if (_.isEmpty(cityData)) {
+        if (cityData.length <= 0) {
             getCityData();
         } else {
-            getForecastData();
+            //getForecastData();
         }
 
         //chart = ApexCharts.getChartByID('forecast-chart');
@@ -82,12 +104,12 @@ const Weather = () => {
 
     useEffect(() => {
         if (cityData.length > 0) {
-            const weatherConditionNames = getWeatherConditionNames(
+            /*const weatherConditionNames = getWeatherConditionNames(
                 cityData.weather[0].id,
                 cityData.sys.sunrise,
                 cityData.sys.sunset
             );
-            setDayBackground(`${weatherConditionNames[0]}${weatherConditionNames[1]}.png`);
+            setDayBackground(`${weatherConditionNames[0]}${weatherConditionNames[1]}.png`);*/
         }
     }, [cityData]);
 
@@ -106,124 +128,140 @@ const Weather = () => {
                     +
                 </button>
             </div>
-            {cityData.length > 0
-                ? cityData.map((cD) => (
-                      <>
-                          <div className="flex p-8 h-screen gap-5">
-                              {/* grid grid-cols-10 */}
-                              <div className="">
-                                  <div className="flex flex-col relative">
-                                      <div className="w-[500px] h-[300px]">
-                                          <div
-                                              className="w-full h-[300px] rounded-lg absolute left-0 top-0 bg-no-repeat bg-cover p-4"
-                                              style={
-                                                  dayBackground != ''
-                                                      ? { backgroundImage: `url('/src/assets/bg/${dayBackground}')` }
-                                                      : {}
-                                              }
-                                          >
-                                              <div className="flex flex-col h-full justify-between">
-                                                  <span className="heading-md !font-normal mb-8">
-                                                      <p>
-                                                          {cD.name}, {cD.sys.country}
-                                                      </p>
-                                                      <p className="heading-xs !font-thin">{getCardDate(cD.dt)}</p>
-                                                  </span>
-                                                  <span className="flex flex-col">
-                                                      <span className="heading-xl mb-4">
-                                                          {Math.round(cD.main.temp)}
-                                                          <span>°c</span>
+            <div className={`${forecastData.length == 1 ? '' : 'flex'}`}>
+                {cityData.length && cityIDs.split(',').length == forecastData.length
+                    ? cityData.map((cD, index) => {
+                          const fD = forecastData[index];
+
+                          const weatherConditionNames = getWeatherConditionNames(
+                              cD.weather[0].id,
+                              cD.sys.sunrise,
+                              cD.sys.sunset
+                          );
+
+                          return (
+                              <>
+                                  <div className="flex p-8 h-screen gap-5 flex-1">
+                                      {/* grid grid-cols-10 */}
+                                      <div className="">
+                                          <div className="flex flex-col relative">
+                                              <div
+                                                  className={`w-[${
+                                                      Object.keys(fD).length == 5 ? '500' : '600'
+                                                  }px] h-[300px]`}
+                                              >
+                                                  <div
+                                                      className="w-full h-[300px] rounded-lg absolute left-0 top-0 bg-no-repeat bg-cover p-4"
+                                                      style={{
+                                                          backgroundImage: `url('/src/assets/bg/${weatherConditionNames[0]}${weatherConditionNames[1]}.png')`,
+                                                      }}
+                                                  >
+                                                      <div className="flex flex-col h-full justify-between">
+                                                          <span className="heading-md !font-normal mb-8">
+                                                              <p>
+                                                                  {cD.name}, {cD.sys.country}
+                                                              </p>
+                                                              <p className="heading-xs !font-thin">
+                                                                  {getCardDate(cD.dt)}
+                                                              </p>
+                                                          </span>
+                                                          <span className="flex flex-col">
+                                                              <span className="heading-xl mb-4">
+                                                                  {Math.round(cD.main.temp)}
+                                                                  <span>°c</span>
+                                                              </span>
+                                                              <span className="heading-md">{`${Math.round(
+                                                                  cD.main.temp_max
+                                                              )}°c / ${Math.round(cD.main.temp_min)}°c`}</span>
+                                                              <span>{cD.weather[0].main}</span>
+                                                          </span>
+                                                      </div>
+                                                      <WeatherIcon
+                                                          iconId={cD.weather[0].id}
+                                                          sunrise={cD.sys.sunrise}
+                                                          sunset={cD.sys.sunset}
+                                                          className="absolute w-[200px] h-[200px] bg-no-repeat bg-center bg-contain -right-10 -bottom-10"
+                                                      />
+                                                  </div>
+                                              </div>
+
+                                              <div className="flex flex-col bg-gray-500/50 rounded-lg p-4 mt-5">
+                                                  <div className="flex justify-between border-b mb-3 pb-3">
+                                                      <span className="flex gap-3">
+                                                          <span>
+                                                              <ThermometerHot size={24} />
+                                                          </span>
+                                                          <span>Thermal sensation</span>
                                                       </span>
-                                                      <span className="heading-md">{`${Math.round(
-                                                          cD.main.temp_max
-                                                      )}°c / ${Math.round(cD.main.temp_min)}°c`}</span>
-                                                      <span>{cD.weather[0].main}</span>
-                                                  </span>
+                                                      <span>{Math.round(cD.main.feels_like)}°c</span>
+                                                  </div>
+
+                                                  <div className="flex justify-between border-b mb-3 pb-3">
+                                                      <span className="flex gap-3">
+                                                          <span>
+                                                              <CloudRain size={24} />
+                                                          </span>
+                                                          <span>Probability of rain</span>
+                                                      </span>
+                                                      <span>0%</span>
+                                                  </div>
+
+                                                  <div className="flex justify-between border-b mb-3 pb-3 relative overflow-hidden">
+                                                      <span className="flex gap-3">
+                                                          <span>
+                                                              <Wind size={24} />
+                                                          </span>
+                                                          <span>Wind speed</span>
+                                                      </span>
+                                                      <span>{cD.wind.speed} km/h</span>
+                                                      <div className="w-[60px] h-[60px] absolute right-16 -top-4 opacity-50">
+                                                          <Compass degree={cD.wind.deg} />
+                                                      </div>
+                                                  </div>
+
+                                                  <div className="flex justify-between border-b mb-3 pb-3">
+                                                      <span className="flex gap-3">
+                                                          <span>
+                                                              <Drop size={24} />
+                                                          </span>
+                                                          <span>Air humidity</span>
+                                                      </span>
+                                                      <span>{cD.main.humidity}%</span>
+                                                  </div>
+
+                                                  <div className="flex justify-between">
+                                                      <span className="flex gap-3">
+                                                          <span>
+                                                              <SunDim size={24} />
+                                                          </span>
+                                                          <span>UV Index</span>
+                                                      </span>
+                                                      <span>-</span>
+                                                  </div>
                                               </div>
-                                              <WeatherIcon
-                                                  iconId={cD.weather[0].id}
-                                                  sunrise={cD.sys.sunrise}
-                                                  sunset={cD.sys.sunset}
-                                                  className="absolute w-[200px] h-[200px] bg-no-repeat bg-center bg-contain -right-10 -bottom-10"
-                                              />
-                                          </div>
-                                      </div>
 
-                                      <div className="flex flex-col bg-gray-500/50 rounded-lg p-4 mt-5">
-                                          <div className="flex justify-between border-b mb-3 pb-3">
-                                              <span className="flex gap-3">
-                                                  <span>
-                                                      <ThermometerHot size={24} />
-                                                  </span>
-                                                  <span>Thermal sensation</span>
-                                              </span>
-                                              <span>{Math.round(cD.main.feels_like)}°c</span>
-                                          </div>
-
-                                          <div className="flex justify-between border-b mb-3 pb-3">
-                                              <span className="flex gap-3">
-                                                  <span>
-                                                      <CloudRain size={24} />
-                                                  </span>
-                                                  <span>Probability of rain</span>
-                                              </span>
-                                              <span>0%</span>
-                                          </div>
-
-                                          <div className="flex justify-between border-b mb-3 pb-3 relative overflow-hidden">
-                                              <span className="flex gap-3">
-                                                  <span>
-                                                      <Wind size={24} />
-                                                  </span>
-                                                  <span>Wind speed</span>
-                                              </span>
-                                              <span>{cD.wind.speed} km/h</span>
-                                              <div className="w-[60px] h-[60px] absolute right-16 -top-4 opacity-50">
-                                                  <Compass degree={cD.wind.deg} />
+                                              <div className="mt-5">
+                                                  {forecastData.length > 1 ? (
+                                                      <DailyForecast mini={true} forecastData={fD} cityData={cD} />
+                                                  ) : (
+                                                      ''
+                                                  )}
                                               </div>
                                           </div>
-
-                                          <div className="flex justify-between border-b mb-3 pb-3">
-                                              <span className="flex gap-3">
-                                                  <span>
-                                                      <Drop size={24} />
-                                                  </span>
-                                                  <span>Air humidity</span>
-                                              </span>
-                                              <span>{cD.main.humidity}%</span>
-                                          </div>
-
-                                          <div className="flex justify-between">
-                                              <span className="flex gap-3">
-                                                  <span>
-                                                      <SunDim size={24} />
-                                                  </span>
-                                                  <span>UV Index</span>
-                                              </span>
-                                              <span>-</span>
-                                          </div>
                                       </div>
-
-                                      <div className="mt-5">
-                                          {Object.keys(forecastData).length > 0 ? (
-                                              <DailyForecast mini={true} forecastData={forecastData} cityData={cD} />
-                                          ) : (
-                                              ''
-                                          )}
-                                      </div>
+                                      {forecastData.length == 1 ? (
+                                          <div className="flex-1">
+                                              <DailyForecast forecastData={fD} cityData={cD} />
+                                          </div>
+                                      ) : (
+                                          ''
+                                      )}
                                   </div>
-                              </div>
-                              {Object.keys(forecastData).length > 0 ? (
-                                  <div className="flex-1">
-                                      <DailyForecast forecastData={forecastData} cityData={cD} />
-                                  </div>
-                              ) : (
-                                  ''
-                              )}
-                          </div>
-                      </>
-                  ))
-                : ''}
+                              </>
+                          );
+                      })
+                    : ''}
+            </div>
         </>
     );
 };
