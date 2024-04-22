@@ -1,8 +1,10 @@
 import { Fragment, useState } from 'react';
 import { Combobox, Transition } from '@headlessui/react';
 import { SpinnerGap } from '@phosphor-icons/react';
-import axios from 'axios';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+
+import api from '../api/openweathermap';
+import { showError } from '../utils/toast';
 
 export default () => {
     const navigate = useNavigate();
@@ -11,7 +13,7 @@ export default () => {
     const [requestLoading, setRequestLoading] = useState(false);
     const [locations, setLocations] = useState([]);
 
-    const fetchGeoLocations = async (q) => {
+    const fetchGeoLocations = (q) => {
         if (q === null || q === '') {
             setLocations([]);
             return;
@@ -19,16 +21,21 @@ export default () => {
 
         setRequestLoading(true);
 
-        const data = await (
-            await axios.get(
-                `https://api.openweathermap.org/geo/1.0/direct?limit=5&appid=15836d36b32958ff62c0f30e4d1aafba&q=${q}`
-            )
-        ).data;
+        try {
+            api.get(`/geo/1.0/direct?limit=5&q=${q}`).then((response) => setLocations(response.data));
+        } catch (error) {
+            if (error.response) {
+                if (error.response.status == 401) {
+                    showError(
+                        'API sunucusuna iletilen istek rededildi. Yöneticisi iseniz lütfen API anahtarını kontrol edin, değilseniz lütfen yönetici ile iletişime geçin.'
+                    );
+                }
+            } else {
+                showError('Bir hata oluştu. Lütfen sayfayı yenileyip tekrar deneyin.');
+            }
+        }
 
-        setLocations(data);
         setRequestLoading(false);
-
-        console.log(data);
     };
 
     const handleSearchChange = (e) => {
@@ -36,20 +43,30 @@ export default () => {
 
         setQuery(q);
         fetchGeoLocations(q);
-
-        console.log(e.target.value);
     };
 
-    const handleClickedLocation = async (selectedLocation) => {
-        const { lat, lon } = selectedLocation;
+    const handleClickedLocation = (selectedLocation) => {
+        if (selectedLocation != null) {
+            const { lat, lon } = selectedLocation;
 
-        const data = await (
-            await axios.get(
-                `https://api.openweathermap.org/data/2.5/weather?appid=15836d36b32958ff62c0f30e4d1aafba&lat=${lat}&lon=${lon}&units=metric`
-            )
-        ).data;
+            setRequestLoading(true);
 
-        navigate(`/weather/${data.id}`, { state: { cityData: data } });
+            try {
+                api.get(`/data/2.5/weather?lat=${lat}&lon=${lon}`).then((response) =>
+                    navigate(`/weather/${response.data.id}`, { state: { cityData: response.data } })
+                );
+            } catch (error) {
+                if (error.response) {
+                    if (error.response.status == 401) {
+                        showError(
+                            'API sunucusuna iletilen istek rededildi. Yöneticisi iseniz lütfen API anahtarını kontrol edin, değilseniz lütfen yönetici ile iletişime geçin.'
+                        );
+                    }
+                } else {
+                    showError('Bir hata oluştu. Lütfen sayfayı yenileyip tekrar deneyin.');
+                }
+            }
+        }
     };
 
     return (

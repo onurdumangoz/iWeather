@@ -1,285 +1,229 @@
 import axios from 'axios';
 import _ from 'lodash';
-import { Clock, Cloud, Drop, ThermometerHot, SpinnerGap, Eye } from '@phosphor-icons/react';
+import { Clock, Cloud, Drop, ThermometerHot, SpinnerGap, Eye, CloudRain, Wind, SunDim } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import Chart from 'react-apexcharts';
 
-import { getDayName, getShortMonth } from '../utils/formatDate';
+import api from '../api/openweathermap';
+import { getCardDate, getDayName, getShortMonth, isDay } from '../utils/formatDate';
+import Compass from './Compass';
+import WeatherIcon from './WeatherIcon';
+import { getFirstDigit, getWeatherConditionNames, wait } from '../utils/helpers';
+import { showError } from '../utils/toast';
+import DailyForecast from './DailyForecast';
 
 const Weather = () => {
     const location = useLocation();
     const { cityIDs } = useParams();
-    const cityData = location.state?.cityData;
-    const [forecastData, setForecastData] = useState({});
-    var chart = {};
+    //const cityData = location.state?.cityData;
+    const [cityData, setCityData] = useState([]);
+    const [forecastData, setForecastData] = useState([]);
+    //const [first, setfirst] = useState(second)
 
-    const [chartData, setChartData] = useState({
-        options: {
-            chart: {
-                id: 'forecast-chart',
-                fontFamily: "'Nunito', sans-serif",
-                selection: {
-                    enabled: false,
-                },
-                zoom: {
-                    enabled: false,
-                },
-                toolbar: {
-                    show: false,
-                },
-            },
-            dataLabels: {
-                enabled: true,
-                style: {
-                    colors: ['#ffffff'],
-                },
-                background: {
-                    enabled: false,
-                },
-            },
-            grid: {
-                show: false,
-                padding: {
-                    left: 16,
-                    right: 16,
-                },
-            },
-            stroke: {
-                curve: 'smooth',
-            },
-            fill: {
-                type: 'gradient',
-            },
-            tooltip: {
-                enabled: false,
-            },
-            xaxis: {
-                type: 'category',
-                //categories: [], // 1712523600000, 1712534400000, 1712545200000, 1712556000000, 1712566800000, 1712577600000, 1712588400000, 1712599200000,
-                //tickAmount: 9,
-                tickPlacement: 'on',
-                labels: {
-                    show: true,
-                },
-                axisBorder: {
-                    show: false,
-                },
-                axisTicks: {
-                    show: false,
-                },
-                crosshairs: {
-                    show: true,
-                },
-                tooltip: {
-                    enabled: false,
-                },
-            },
-            yaxis: {
-                show: false,
-            },
-        },
-        series: [
-            /*{
-                name: 'series-1',
-                data: [10, 20, 30, 40, 50, 60, 70, 80],
-            },*/
-        ],
-    });
+    const [dayBackground, setDayBackground] = useState('');
 
-    const getForecastData = async () => {
-        const data = await (
-            await axios.get(
-                `https://api.openweathermap.org/data/2.5/forecast?appid=15836d36b32958ff62c0f30e4d1aafba&id=${cityData.id}&units=metric`
-            )
-        ).data;
-
-        /*const dd = _(data.list)
-            .groupBy((x) => new Date(x.dt + '000').getDate())
-            .mapValues((x) => _.map(x))
-            .value();*/
-
-        const groupedData = _.groupBy(data.list, (x) => new Date(parseInt(x.dt + '000')).getDate());
-        //console.log(groupedData);
-
-        setForecastData(groupedData);
-    };
-
-    const updateChartData = () => {
-        let seriesData = [];
-        let categories = [];
-
-        Object.keys(forecastData).map((key) => {
-            forecastData[key].map((dayItem) => {
-                const dt = new Date(parseInt(dayItem.dt + '000'));
-                categories.push(`${dt.getHours() < 10 ? '0' + dt.getHours() : dt.getHours()}:00`);
-
-                seriesData.push(dayItem.main.temp);
+    const getForecastData = (cityId = 0) => {
+        try {
+            api.get(`/data/2.5/forecast?id=${cityId > 0 ? cityId : cityData.id}`).then((response) => {
+                const groupedData = _.groupBy(response.data.list, (x) => new Date(x.dt * 1000).getDate());
+                setForecastData(groupedData);
             });
-        });
-
-        setChartData((prev) => ({
-            ...prev,
-            options: { xaxis: { categories, min: 1, max: 9 } },
-            series: [{ name: 'temps', data: seriesData }],
-        }));
+        } catch (error) {
+            if (error.response) {
+                if (error.response.status == 401) {
+                    showErroror(
+                        'API sunucusuna iletilen istek rededildi. Yöneticisi iseniz lütfen API anahtarını kontrol edin, değilseniz lütfen yönetici ile iletişime geçin.'
+                    );
+                }
+            } else {
+                showError('Bir hata oluştu. Lütfen sayfayı yenileyip tekrar deneyin.3');
+            }
+        }
     };
 
     useEffect(() => {
-        getForecastData();
+        const getCityData = async () => {
+            try {
+                const cityIDsArr = cityIDs.split(',');
 
-        chart = ApexCharts.getChartByID('forecast-chart');
+                for (let i = 0; i < cityIDsArr.length; i++) {
+                    /*api.get(`/data/2.5/weather?id=${cityIDsArr[i]}`).then((response) => {
+                        setCityData(response.data);
+                        getForecastData(response.data.id);
+                    });*/
+                    const data = await (await api.get(`/data/2.5/weather?id=${cityIDsArr[i]}`)).data;
+                    setCityData((prev) => [...prev, data]);
+                    getForecastData(response.data.id);
+                }
+            } catch (error) {
+                if (error.response) {
+                    if (error.response.status == 401) {
+                        showError(
+                            'API sunucusuna iletilen istek rededildi. Yöneticisi iseniz lütfen API anahtarını kontrol edin, değilseniz lütfen yönetici ile iletişime geçin.'
+                        );
+                    }
+                } else {
+                    showError('Bir hata oluştu. Lütfen sayfayı yenileyip tekrar deneyin.2');
+                }
+            }
+        };
+
+        if (_.isEmpty(cityData)) {
+            getCityData();
+        } else {
+            getForecastData();
+        }
+
+        //chart = ApexCharts.getChartByID('forecast-chart');
         //chart.updateSeries([{ name: 'temps', data: [10, 20, 30] }]);
         //setChartData((prev) => ({ ...prev, series: [{ name: 'temps', data: [10, 20, 30] }] }));
     }, []);
 
     useEffect(() => {
-        updateChartData();
+        if (cityData.length > 0) {
+            const weatherConditionNames = getWeatherConditionNames(
+                cityData.weather[0].id,
+                cityData.sys.sunrise,
+                cityData.sys.sunset
+            );
+            setDayBackground(`${weatherConditionNames[0]}${weatherConditionNames[1]}.png`);
+        }
+    }, [cityData]);
+
+    useEffect(() => {
+        if (Object.keys(forecastData).length > 0) {
+            //updateChartData();
+        }
     }, [forecastData]);
 
-    const handleWeatherCartClick = (dayKey) => {
-        const firstForecastDay = parseInt(Object.keys(forecastData)[0]);
-        const diffClickedDay = parseInt(dayKey) - firstForecastDay;
-
-        const dayIndex = Object.keys(forecastData).indexOf(dayKey);
-        let diffMinBeforeToday = 0;
-        if (dayIndex > 0) {
-            for (let i = 0; i < dayIndex; i++) {
-                const d = forecastData[Object.keys(forecastData)[i]];
-                diffMinBeforeToday += d.length;
-            }
-        }
-
-        const isLastDay = Object.keys(forecastData)[Object.keys(forecastData).length - 1] === dayKey;
-
-        let min = diffClickedDay <= 0 ? 1 : diffMinBeforeToday + 1;
-        let max =
-            diffClickedDay <= 0
-                ? forecastData[Object.keys(forecastData)[0]].length + 1
-                : diffMinBeforeToday + 8 + (isLastDay ? 0 : 1);
-
-        //console.log(Object.keys(forecastData).filter((x) => parseInt(x) < parseInt(dayKey)));
-        //const dayObj = forecastData[dayKey];
-        //const temps = dayObj.map((x) => x.main.temp);
-
-        setChartData((prev) => ({
-            ...prev,
-            options: { xaxis: { min, max } },
-        }));
-    };
+    const openAddModal = () => {};
 
     return (
         <>
-            <div className="flex p-8 h-screen gap-5">
-                <div className="flex basis-5/12 flex-col justify-evenly">
-                    <div className="flex flex-col items-center">
-                        <span className="heading-xl">
-                            {Math.round(cityData.main.temp)}
-                            <span className="font-thin">°C</span>
-                        </span>
-                        <span className="text-3xl">{cityData.weather[0].main}</span>
-                    </div>
-                    <div>
-                        <div className="flex gap-4">
-                            <div className="basis-1/2">
-                                <div className="flex flex-col justify-between h-32 bg-gray-500/50 rounded-lg p-3">
-                                    <div>
-                                        <div className="flex">
-                                            <ThermometerHot size={24} />
-                                            <span className="ml-2">FEELS LIKE</span>
-                                        </div>
-                                        <div>
-                                            <span className="heading-lg">
-                                                {Math.round(cityData.main.feels_like)}
-                                                <span className="font-thin">°C</span>
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <span>Humidity is making it feel warmer</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="basis-1/2">
-                                <div className="flex flex-col justify-between h-32 bg-gray-500/50 rounded-lg p-3">
-                                    <div>
-                                        <div className="flex">
-                                            <Drop size={24} />
-                                            <span className="ml-2">PRECIPITATION</span>
-                                        </div>
-                                        <div>
-                                            <span className="heading-lg">2.3"</span>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <span>2" expected in next 24h</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="basis-1/2">
-                                <div className="flex flex-col justify-between h-32 bg-gray-500/50 rounded-lg p-3">
-                                    <div>
-                                        <div className="flex">
-                                            <Eye size={24} />
-                                            <span className="ml-2">VISIBILITY</span>
-                                        </div>
-                                        <div>
-                                            <span className="heading-lg">{cityData.visibility / 1000}km</span>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <span></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div className="basis-7/12">
-                    <div className="flex gap-4 flex-col bg-gray-500/50 rounded-lg p-3">
-                        <div className="border-b w-full pb-4">
-                            <div className="flex">
-                                <Clock size={24} />
-                                <span className="ml-2">DAILY FORECAST</span>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3">
-                            {Object.keys(forecastData).map((key) => {
-                                const dayDt = new Date(parseInt(forecastData[key][0].dt + '000'));
-                                const avgTemp = Math.round(
-                                    _.sumBy(forecastData[key], (x) => x.main.temp_max) / forecastData[key].length
-                                );
-
-                                //console.log(forecastData[key].reduce((x) => x.main.temp));
-                                return (
-                                    <div
-                                        className="flex flex-col items-center py-3 px-5 rounded-lg cursor-pointer select-none weather-daily-cart active"
-                                        onClick={() => {
-                                            handleWeatherCartClick(key);
-                                        }}
-                                    >
-                                        <span className="heading-md">{getDayName(dayDt)}</span>
-                                        <span className="font-thin">{getShortMonth(dayDt)}</span>
-                                        <span className="heading-lg">{avgTemp}°</span>
-                                        <Cloud size={24} />
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                    <div>
-                        <Chart options={chartData.options} series={chartData.series} type="area" height={250} />
-                        <div id="forecast-chart"></div>
-                        <div>{JSON.stringify(forecastData)}</div>
-                    </div>
-                </div>
+            <div className="absolute bottom-5 left-1/2 -translate-x-1/2">
+                <button className="w-20 h-20 rounded-full bg-red-400 heading-lg" onClick={openAddModal}>
+                    +
+                </button>
             </div>
+            {cityData.length > 0
+                ? cityData.map((cD) => (
+                      <>
+                          <div className="flex p-8 h-screen gap-5">
+                              {/* grid grid-cols-10 */}
+                              <div className="">
+                                  <div className="flex flex-col relative">
+                                      <div className="w-[500px] h-[300px]">
+                                          <div
+                                              className="w-full h-[300px] rounded-lg absolute left-0 top-0 bg-no-repeat bg-cover p-4"
+                                              style={
+                                                  dayBackground != ''
+                                                      ? { backgroundImage: `url('/src/assets/bg/${dayBackground}')` }
+                                                      : {}
+                                              }
+                                          >
+                                              <div className="flex flex-col h-full justify-between">
+                                                  <span className="heading-md !font-normal mb-8">
+                                                      <p>
+                                                          {cD.name}, {cD.sys.country}
+                                                      </p>
+                                                      <p className="heading-xs !font-thin">{getCardDate(cD.dt)}</p>
+                                                  </span>
+                                                  <span className="flex flex-col">
+                                                      <span className="heading-xl mb-4">
+                                                          {Math.round(cD.main.temp)}
+                                                          <span>°c</span>
+                                                      </span>
+                                                      <span className="heading-md">{`${Math.round(
+                                                          cD.main.temp_max
+                                                      )}°c / ${Math.round(cD.main.temp_min)}°c`}</span>
+                                                      <span>{cD.weather[0].main}</span>
+                                                  </span>
+                                              </div>
+                                              <WeatherIcon
+                                                  iconId={cD.weather[0].id}
+                                                  sunrise={cD.sys.sunrise}
+                                                  sunset={cD.sys.sunset}
+                                                  className="absolute w-[200px] h-[200px] bg-no-repeat bg-center bg-contain -right-10 -bottom-10"
+                                              />
+                                          </div>
+                                      </div>
+
+                                      <div className="flex flex-col bg-gray-500/50 rounded-lg p-4 mt-5">
+                                          <div className="flex justify-between border-b mb-3 pb-3">
+                                              <span className="flex gap-3">
+                                                  <span>
+                                                      <ThermometerHot size={24} />
+                                                  </span>
+                                                  <span>Thermal sensation</span>
+                                              </span>
+                                              <span>{Math.round(cD.main.feels_like)}°c</span>
+                                          </div>
+
+                                          <div className="flex justify-between border-b mb-3 pb-3">
+                                              <span className="flex gap-3">
+                                                  <span>
+                                                      <CloudRain size={24} />
+                                                  </span>
+                                                  <span>Probability of rain</span>
+                                              </span>
+                                              <span>0%</span>
+                                          </div>
+
+                                          <div className="flex justify-between border-b mb-3 pb-3 relative overflow-hidden">
+                                              <span className="flex gap-3">
+                                                  <span>
+                                                      <Wind size={24} />
+                                                  </span>
+                                                  <span>Wind speed</span>
+                                              </span>
+                                              <span>{cD.wind.speed} km/h</span>
+                                              <div className="w-[60px] h-[60px] absolute right-16 -top-4 opacity-50">
+                                                  <Compass degree={cD.wind.deg} />
+                                              </div>
+                                          </div>
+
+                                          <div className="flex justify-between border-b mb-3 pb-3">
+                                              <span className="flex gap-3">
+                                                  <span>
+                                                      <Drop size={24} />
+                                                  </span>
+                                                  <span>Air humidity</span>
+                                              </span>
+                                              <span>{cD.main.humidity}%</span>
+                                          </div>
+
+                                          <div className="flex justify-between">
+                                              <span className="flex gap-3">
+                                                  <span>
+                                                      <SunDim size={24} />
+                                                  </span>
+                                                  <span>UV Index</span>
+                                              </span>
+                                              <span>-</span>
+                                          </div>
+                                      </div>
+
+                                      <div className="mt-5">
+                                          {Object.keys(forecastData).length > 0 ? (
+                                              <DailyForecast mini={true} forecastData={forecastData} cityData={cD} />
+                                          ) : (
+                                              ''
+                                          )}
+                                      </div>
+                                  </div>
+                              </div>
+                              {Object.keys(forecastData).length > 0 ? (
+                                  <div className="flex-1">
+                                      <DailyForecast forecastData={forecastData} cityData={cD} />
+                                  </div>
+                              ) : (
+                                  ''
+                              )}
+                          </div>
+                      </>
+                  ))
+                : ''}
         </>
     );
 };

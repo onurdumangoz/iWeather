@@ -28,6 +28,12 @@ export default {
                 sm: ['14px', '140%'],
                 xs: ['12px', '140%'],
             },
+            backgroundImage: {
+                compass: "url('/src/assets/Compass.png')",
+                'compass-arrow': "url('/src/assets/CompassArrow.png')",
+                'day-clear': "url('/src/assets/bg/DayClear.png')",
+                'icon-nfc': "url('/src/assets/icons/NightFewClouds.svg')",
+            },
         },
     },
     plugins: [

@@ -13,7 +13,7 @@ body {
 }
 
 body {
-    @apply bg-red-300; /* bg-gray-900 */
+    @apply bg-gray-900 text-white; /* bg-gray-900 */
 }
 
 .weather-daily-cart.active {
