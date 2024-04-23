@@ -1,12 +1,14 @@
+import _ from 'lodash';
 import { Fragment, useState } from 'react';
 import { Combobox, Transition } from '@headlessui/react';
 import { SpinnerGap } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
+import { nanoid } from 'nanoid';
 
-import api from '../api/openweathermap';
+import api, { getForecastDataAPI, getWeatherDataAPIById, getWeatherDataAPIByLocation } from '../api/openweathermap';
 import { showError } from '../utils/toast';
 
-export default () => {
+const SearchInput = ({ typeAdd, setForecastData, setCityData, closeModal }) => {
     const navigate = useNavigate();
 
     const [query, setQuery] = useState('');
@@ -45,16 +47,38 @@ export default () => {
         fetchGeoLocations(q);
     };
 
-    const handleClickedLocation = (selectedLocation) => {
+    const handleClickedLocation = async (selectedLocation) => {
         if (selectedLocation != null) {
             const { lat, lon } = selectedLocation;
 
             setRequestLoading(true);
 
-            try {
-                api.get(`/data/2.5/weather?lat=${lat}&lon=${lon}`).then((response) =>
-                    navigate(`/weather/${response.data.id}`, { state: { cityData: response.data } })
+            const data = await getWeatherDataAPIByLocation(lat, lon);
+
+            if (typeAdd) {
+                const selectedLocationWeatherData = await getWeatherDataAPIById(data.id);
+                setCityData((prev) => [...prev, selectedLocationWeatherData]);
+
+                const selectedLocationForecastData = await getForecastDataAPI(data.id);
+                const groupedFData = _.groupBy(selectedLocationForecastData.list, (x) =>
+                    new Date(x.dt * 1000).getDate()
                 );
+                setForecastData((prev) => [...prev, groupedFData]);
+
+                closeModal();
+            } else {
+                navigate(`/weather/${data.id}`, { state: nanoid() });
+            }
+
+            /*try {
+                api.get(`/data/2.5/weather?lat=${lat}&lon=${lon}`).then((response) => {
+                    if (typeAdd) {
+                        //await getWeatherDataAPI(response.data.id);
+                        //setCityData(prev => [...prev, ]);
+                    } else {
+                        navigate(`/weather/${response.data.id}`, { state: nanoid() });
+                    }
+                });
             } catch (error) {
                 if (error.response) {
                     if (error.response.status == 401) {
@@ -65,7 +89,7 @@ export default () => {
                 } else {
                     showError('Bir hata oluştu. Lütfen sayfayı yenileyip tekrar deneyin.');
                 }
-            }
+            }*/
         }
     };
 
@@ -98,7 +122,7 @@ export default () => {
                     >
                         <Combobox.Options
                             className="absolute mt-1 max-h-60 w-full overflow-auto rounded-lg"
-                            key="cb-locations"
+                            key={nanoid()}
                         >
                             {!requestLoading && locations.length <= 0 ? (
                                 <div className="relative cursor-default select-none p-4 text-white bg-gray-400">
@@ -106,25 +130,23 @@ export default () => {
                                 </div>
                             ) : (
                                 locations.map((location, index) => (
-                                    <>
-                                        <Combobox.Option
-                                            key={(location.lat + location.lon).toFixed(5).replace('.', '')}
-                                            className={`relative cursor-pointer select-none p-4 text-white text-left bg-gray-400 ${
-                                                index + 1 < locations.length ? 'border-b border-gray-600' : ''
-                                            }`}
-                                            value={location}
-                                        >
-                                            <span className="block">
-                                                <span>{location.name}</span>
-                                                {location.country !== null && location.country !== '' ? (
-                                                    <>
-                                                        <span> - </span>
-                                                        <span>{location.country}</span>
-                                                    </>
-                                                ) : null}
-                                            </span>
-                                        </Combobox.Option>
-                                    </>
+                                    <Combobox.Option
+                                        key={nanoid()}
+                                        className={`relative cursor-pointer select-none p-4 text-white text-left bg-gray-400 ${
+                                            index + 1 < locations.length ? 'border-b border-gray-600' : ''
+                                        }`}
+                                        value={location}
+                                    >
+                                        <span className="block">
+                                            <span>{location.name}</span>
+                                            {location.country !== null && location.country !== '' ? (
+                                                <>
+                                                    <span> - </span>
+                                                    <span>{location.country}</span>
+                                                </>
+                                            ) : null}
+                                        </span>
+                                    </Combobox.Option>
                                 ))
                             )}
                         </Combobox.Options>
@@ -134,3 +156,9 @@ export default () => {
         </>
     );
 };
+
+SearchInput.defaultProps = {
+    typeAdd: false,
+};
+
+export default SearchInput;

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import _ from 'lodash';
 import { Clock } from '@phosphor-icons/react';
 import Chart from 'react-apexcharts';
+import { nanoid } from 'nanoid';
 
 import { getCardDate, getDayName, getShortMonth, isDay } from '../utils/formatDate';
 import WeatherIcon from './WeatherIcon';
@@ -90,39 +91,6 @@ const DailyForecast = ({ mini, forecastData, cityData }) => {
         ],
     });
 
-    const updateChartData = () => {
-        let tempSeries = [];
-        let rainSeries = [];
-        let categories = [];
-
-        const forecastDataObjKeys = Object.keys(forecastData);
-        const forecastDataObjValues = Object.values(forecastData);
-
-        forecastDataObjKeys.map((key) => {
-            forecastData[key].map((dayItem) => {
-                const dt = new Date(parseInt(dayItem.dt + '000'));
-                categories.push(`${dt.getHours() < 10 ? '0' + dt.getHours() : dt.getHours()}:00`);
-
-                tempSeries.push(dayItem.main.temp);
-                rainSeries.push(parseInt(dayItem.pop * 100));
-            });
-        });
-
-        let max =
-            (forecastDataObjValues[0].length < 5
-                ? forecastDataObjValues[0].length + forecastDataObjValues[1].length
-                : forecastDataObjValues[0].length) + 1;
-
-        setChartData((prev) => ({
-            ...prev,
-            options: { xaxis: { categories, min: 1, max } },
-            series: [
-                { name: 'Temperature', type: 'area', data: tempSeries, color: '#ffcc00' },
-                { name: 'Precipitation', type: 'column', data: rainSeries, color: '#1a73e8' },
-            ],
-        }));
-    };
-
     const handleWeatherCartClick = (dayKey, selectedDayIndex) => {
         const forecastDataObjKeys = Object.keys(forecastData);
         const forecastDataObjValues = Object.values(forecastData);
@@ -169,8 +137,39 @@ const DailyForecast = ({ mini, forecastData, cityData }) => {
     };
 
     useEffect(() => {
-        updateChartData();
-    }, []);
+        if (forecastData != null) {
+            let tempSeries = [];
+            let rainSeries = [];
+            let categories = [];
+
+            const forecastDataObjKeys = Object.keys(forecastData);
+            const forecastDataObjValues = Object.values(forecastData);
+
+            forecastDataObjKeys.map((key) => {
+                forecastData[key].map((dayItem) => {
+                    const dt = new Date(parseInt(dayItem.dt + '000'));
+                    categories.push(`${dt.getHours() < 10 ? '0' + dt.getHours() : dt.getHours()}:00`);
+
+                    tempSeries.push(dayItem.main.temp);
+                    rainSeries.push(parseInt(dayItem.pop * 100));
+                });
+            });
+
+            let max =
+                (forecastDataObjValues[0].length < 5
+                    ? forecastDataObjValues[0].length + forecastDataObjValues[1].length
+                    : forecastDataObjValues[0].length) + 1;
+
+            setChartData((prev) => ({
+                ...prev,
+                options: { xaxis: { categories, min: 1, max } },
+                series: [
+                    { name: 'Temperature', type: 'area', data: tempSeries, color: '#ffcc00' },
+                    { name: 'Precipitation', type: 'column', data: rainSeries, color: '#1a73e8' },
+                ],
+            }));
+        }
+    }, [forecastData]);
 
     return (
         <div className="flex flex-col w-full">
@@ -187,48 +186,53 @@ const DailyForecast = ({ mini, forecastData, cityData }) => {
                         ''
                     )}
 
-                    <div className={`flex ${mini ? '' : 'gap-3 p-3 overflow-x-auto'}`}>
-                        {Object.keys(forecastData).map((key, index) => {
-                            const dayObj = forecastData[key];
+                    <div className={`flex overflow-x-auto ${mini ? '' : 'gap-3 p-3'}`}>
+                        {forecastData != null
+                            ? Object.keys(forecastData).map((key, index) => {
+                                  const dayObj = forecastData[key];
 
-                            const groupedWeatherData = _.groupBy(dayObj, (x) => x.weather[0].id);
-                            const weatherObj = _.maxBy(Object.values(groupedWeatherData), (x) => x.length)[0];
-                            const dayIcon = weatherObj.weather[0].id;
+                                  const groupedWeatherData = _.groupBy(dayObj, (x) => x.weather[0].id);
+                                  const weatherObj = _.maxBy(Object.values(groupedWeatherData), (x) => x.length)[0];
+                                  const dayIcon = weatherObj.weather[0].id;
 
-                            //const dayDt = new Date(parseInt(dayObj[0].dt + '000'));
+                                  //const dayDt = new Date(parseInt(dayObj[0].dt + '000'));
 
-                            //const avgTemp = Math.round(_.sumBy(dayObj, (x) => x.main.temp) / dayObj.length);
-                            const maxTemp = Math.round(_.maxBy(dayObj, (x) => x.main.temp_max).main.temp_max);
-                            const minTemp = Math.round(_.minBy(dayObj, (x) => x.main.temp_min).main.temp_min);
+                                  //const avgTemp = Math.round(_.sumBy(dayObj, (x) => x.main.temp) / dayObj.length);
+                                  const maxTemp = Math.round(_.maxBy(dayObj, (x) => x.main.temp_max).main.temp_max);
+                                  const minTemp = Math.round(_.minBy(dayObj, (x) => x.main.temp_min).main.temp_min);
 
-                            return (
-                                <div
-                                    className={`flex flex-col items-center rounded-lg cursor-pointer select-none weather-daily-cart ${
-                                        selectedDay == index && !mini ? 'active' : ''
-                                    } ${mini ? 'py-3' : 'p-3'}`}
-                                    onClick={() => {
-                                        mini ? '' : handleWeatherCartClick(key, index);
-                                    }}
-                                >
-                                    <span className={mini ? 'heading-sm' : 'heading-md'}>
-                                        {getDayName(dayObj[0].dt)}
-                                    </span>
-                                    <span className="font-thin">{getShortMonth(dayObj[0].dt)}</span>
-                                    <span className="flex items-center">
-                                        <span className={mini ? 'heading-md' : 'heading-lg'}>{maxTemp}°</span>
-                                        <span className={`${mini ? 'heading-sm' : 'heading-md'} !font-normal ml-2`}>
-                                            {minTemp}°
-                                        </span>
-                                    </span>
-                                    <WeatherIcon
-                                        iconId={dayIcon}
-                                        sunrise={cityData.sys.sunrise}
-                                        sunset={cityData.sys.sunset}
-                                        current={weatherObj.dt}
-                                    />
-                                </div>
-                            );
-                        })}
+                                  return (
+                                      <div
+                                          key={nanoid()}
+                                          className={`flex flex-col items-center rounded-lg cursor-pointer select-none weather-daily-cart ${
+                                              selectedDay == index && !mini ? 'active' : ''
+                                          } ${mini ? 'py-3' : 'p-3'}`}
+                                          onClick={() => {
+                                              mini ? '' : handleWeatherCartClick(key, index);
+                                          }}
+                                      >
+                                          <span className={mini ? 'heading-sm' : 'heading-md'}>
+                                              {getDayName(dayObj[0].dt)}
+                                          </span>
+                                          <span className="font-thin">{getShortMonth(dayObj[0].dt)}</span>
+                                          <span className="flex items-center">
+                                              <span className={mini ? 'heading-md' : 'heading-lg'}>{maxTemp}°</span>
+                                              <span
+                                                  className={`${mini ? 'heading-sm' : 'heading-md'} !font-normal ml-2`}
+                                              >
+                                                  {minTemp}°
+                                              </span>
+                                          </span>
+                                          <WeatherIcon
+                                              iconId={dayIcon}
+                                              sunrise={cityData.sys.sunrise}
+                                              sunset={cityData.sys.sunset}
+                                              current={weatherObj.dt}
+                                          />
+                                      </div>
+                                  );
+                              })
+                            : ''}
                     </div>
                 </div>
             </div>

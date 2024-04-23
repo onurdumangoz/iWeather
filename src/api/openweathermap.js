@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-export default axios.create({
+const WEATHER_URL = '/data/2.5/weather';
+
+const api = axios.create({
     method: 'get',
     baseURL: 'https://api.openweathermap.org',
     params: {
@@ -8,3 +10,24 @@ export default axios.create({
         units: 'metric',
     },
 });
+
+async function getWeatherDataAPIById(id) {
+    return await (
+        await api.get(`${WEATHER_URL}?id=${id}`)
+    ).data;
+}
+
+async function getWeatherDataAPIByLocation(lat, lon) {
+    return await (
+        await api.get(`${WEATHER_URL}?lat=${lat}&lon=${lon}`)
+    ).data;
+}
+
+async function getForecastDataAPI(id) {
+    return await (
+        await api.get(`/data/2.5/forecast?id=${id}`)
+    ).data;
+}
+
+export default api;
+export { getWeatherDataAPIById, getWeatherDataAPIByLocation, getForecastDataAPI };
