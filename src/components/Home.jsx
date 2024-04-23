@@ -1,5 +1,3 @@
-import React from 'react';
-
 import SearchInput from './SearchInput';
 import LogoWithText from './LogoWithText';
 

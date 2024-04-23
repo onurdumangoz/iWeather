@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import { Drop, ThermometerHot, CloudRain, Wind, SunDim } from '@phosphor-icons/react';
 import { useEffect, useState, Fragment } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Dialog, Transition } from '@headlessui/react';
 import { nanoid } from 'nanoid';
 
@@ -16,36 +16,11 @@ import SearchInput from './SearchInput';
 
 const Weather = () => {
     const navigate = useNavigate();
-    //const location = useLocation();
     const { cityIDs } = useParams();
-    //const cityData = location.state?.cityData;
     const [cityData, setCityData] = useState([]);
     const [forecastData, setForecastData] = useState([]);
     const [addModalIsOpen, setAddModalIsOpen] = useState(false);
     const [forecastIsMini, setForecastIsMini] = useState(false);
-
-    //const [dayBackground, setDayBackground] = useState('');
-
-    /*
-    const getForecastData = (cityId = 0) => {
-        try {
-            api.get(`/data/2.5/forecast?id=${cityId > 0 ? cityId : cityData[0].id}`).then((response) => {
-                const groupedData = _.groupBy(response.data.list, (x) => new Date(x.dt * 1000).getDate());
-                setForecastData((prev) => [...prev, groupedData]);
-            });
-        } catch (error) {
-            if (error.response) {
-                if (error.response.status == 401) {
-                    showErroror(
-                        'API sunucusuna iletilen istek rededildi. Yöneticisi iseniz lütfen API anahtarını kontrol edin, değilseniz lütfen yönetici ile iletişime geçin.'
-                    );
-                }
-            } else {
-                showError('Bir hata oluştu. Lütfen sayfayı yenileyip tekrar deneyin.3');
-            }
-        }
-    };
-    */
 
     useEffect(() => {
         const getCityData = async () => {
@@ -72,24 +47,18 @@ const Weather = () => {
                 if (error.response) {
                     if (error.response.status == 401) {
                         showError(
-                            'API sunucusuna iletilen istek rededildi. Yöneticisi iseniz lütfen API anahtarını kontrol edin, değilseniz lütfen yönetici ile iletişime geçin.'
+                            'The request forwarded to the API server was rejected. If you are an administrator, please check the API key, if not, please contact the administrator.'
                         );
                     }
                 } else {
-                    showError('Bir hata oluştu. Lütfen sayfayı yenileyip tekrar deneyin.2');
+                    showError('Something went wrong. Please refresh the page and try again.');
                 }
             }
         };
 
         if (cityData.length <= 0) {
             getCityData();
-        } else {
-            //getForecastData();
         }
-
-        //chart = ApexCharts.getChartByID('forecast-chart');
-        //chart.updateSeries([{ name: 'temps', data: [10, 20, 30] }]);
-        //setChartData((prev) => ({ ...prev, series: [{ name: 'temps', data: [10, 20, 30] }] }));
     }, []);
 
     useEffect(() => {
@@ -221,11 +190,8 @@ const Weather = () => {
                               cD.sys.sunset
                           );
 
-                          const forecastIsMini = forecastData.length > 1;
-
                           return (
                               <div className="flex p-8 h-screen gap-5 flex-1" key={nanoid()}>
-                                  {/* grid grid-cols-10 */}
                                   <div className="">
                                       <div className="flex flex-col relative">
                                           <div

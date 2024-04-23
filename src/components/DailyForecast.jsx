@@ -4,7 +4,7 @@ import { Clock } from '@phosphor-icons/react';
 import Chart from 'react-apexcharts';
 import { nanoid } from 'nanoid';
 
-import { getCardDate, getDayName, getShortMonth, isDay } from '../utils/formatDate';
+import { getDayName, getShortMonth } from '../utils/formatDate';
 import WeatherIcon from './WeatherIcon';
 import { useEffect } from 'react';
 
@@ -122,7 +122,7 @@ const DailyForecast = ({ mini, forecastData, cityData }) => {
                   (isLastDay ? forecastDataObjValues[forecastDataObjKeys.length - 1].length - 8 : 1);
 
         const mergedForecastData = forecastDataObjValues.reduce((result, array) => result.concat(array));
-        //console.log(mergedForecastData);
+
         let categories = [];
 
         mergedForecastData.map((item) => {
@@ -194,8 +194,6 @@ const DailyForecast = ({ mini, forecastData, cityData }) => {
                                   const groupedWeatherData = _.groupBy(dayObj, (x) => x.weather[0].id);
                                   const weatherObj = _.maxBy(Object.values(groupedWeatherData), (x) => x.length)[0];
                                   const dayIcon = weatherObj.weather[0].id;
-
-                                  //const dayDt = new Date(parseInt(dayObj[0].dt + '000'));
 
                                   //const avgTemp = Math.round(_.sumBy(dayObj, (x) => x.main.temp) / dayObj.length);
                                   const maxTemp = Math.round(_.maxBy(dayObj, (x) => x.main.temp_max).main.temp_max);

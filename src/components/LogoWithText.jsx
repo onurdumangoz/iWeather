@@ -1,5 +1,3 @@
-import React from 'react';
-
 import LogoWithTextImage from '../assets/LogoText.png';
 
 const LogoWithText = () => {

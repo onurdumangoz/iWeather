@@ -29,11 +29,11 @@ const SearchInput = ({ typeAdd, setForecastData, setCityData, closeModal }) => {
             if (error.response) {
                 if (error.response.status == 401) {
                     showError(
-                        'API sunucusuna iletilen istek rededildi. Yöneticisi iseniz lütfen API anahtarını kontrol edin, değilseniz lütfen yönetici ile iletişime geçin.'
+                        'The request forwarded to the API server was rejected. If you are an administrator, please check the API key, if not, please contact the administrator.'
                     );
                 }
             } else {
-                showError('Bir hata oluştu. Lütfen sayfayı yenileyip tekrar deneyin.');
+                showError('Something went wrong. Please refresh the page and try again.');
             }
         }
 
@@ -57,39 +57,29 @@ const SearchInput = ({ typeAdd, setForecastData, setCityData, closeModal }) => {
 
             if (typeAdd) {
                 const selectedLocationWeatherData = await getWeatherDataAPIById(data.id);
-                setCityData((prev) => [...prev, selectedLocationWeatherData]);
 
-                const selectedLocationForecastData = await getForecastDataAPI(data.id);
-                const groupedFData = _.groupBy(selectedLocationForecastData.list, (x) =>
-                    new Date(x.dt * 1000).getDate()
-                );
-                setForecastData((prev) => [...prev, groupedFData]);
+                let cityExist = false;
+                setCityData((prev) => {
+                    if (prev.some((x) => x.id == data.id)) {
+                        cityExist = true;
+                        return prev;
+                    } else {
+                        return [...prev, selectedLocationWeatherData];
+                    }
+                });
+
+                if (!cityExist) {
+                    const selectedLocationForecastData = await getForecastDataAPI(data.id);
+                    const groupedFData = _.groupBy(selectedLocationForecastData.list, (x) =>
+                        new Date(x.dt * 1000).getDate()
+                    );
+                    setForecastData((prev) => [...prev, groupedFData]);
+                }
 
                 closeModal();
             } else {
                 navigate(`/weather/${data.id}`, { state: nanoid() });
             }
-
-            /*try {
-                api.get(`/data/2.5/weather?lat=${lat}&lon=${lon}`).then((response) => {
-                    if (typeAdd) {
-                        //await getWeatherDataAPI(response.data.id);
-                        //setCityData(prev => [...prev, ]);
-                    } else {
-                        navigate(`/weather/${response.data.id}`, { state: nanoid() });
-                    }
-                });
-            } catch (error) {
-                if (error.response) {
-                    if (error.response.status == 401) {
-                        showError(
-                            'API sunucusuna iletilen istek rededildi. Yöneticisi iseniz lütfen API anahtarını kontrol edin, değilseniz lütfen yönetici ile iletişime geçin.'
-                        );
-                    }
-                } else {
-                    showError('Bir hata oluştu. Lütfen sayfayı yenileyip tekrar deneyin.');
-                }
-            }*/
         }
     };
 
